@@ -1,0 +1,27 @@
+sudo: false
+language: python
+matrix:
+  include:
+    - python: 3.6
+    - python: 3.7
+      dist: xenial
+before_install:
+  - pip install poetry
+  - sudo apt-get install graphviz
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
+install:
+  - poetry install -v
+script:
+  - pytest tests/
+after_success: |
+  if [ "$TRAVIS_PYTHON_VERSION" == "3.7" ]; then
+    ./cc-test-reporter format-coverage .coverage.xml --input-type coverage.py
+    ./cc-test-reporter upload-coverage
+  fi
+deploy:
+  provider: script
+  script: poetry publish --build -u $PYPI_USER -p $PYPI_PASSWORD
+  on:
+    tags: true
+    condition: "$TRAVIS_PYTHON_VERSION == 3.7"
