@@ -1,4 +1,4 @@
-# pyppl_flowchart
+# pyppl_web
 
 [![Pypi][3]][4] [![Github][5]][6] [![PyPPL][7]][1] [![PythonVers][8]][4] [![Travis building][10]][11] [![Codacy][12]][13] [![Codacy coverage][14]][13]
 

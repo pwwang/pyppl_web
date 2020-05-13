@@ -4,6 +4,7 @@ matrix:
   include:
     - python: 3.6
     - python: 3.7
+    - python: 3.8
       dist: xenial
 before_install:
   - pip install poetry
@@ -15,7 +16,7 @@ install:
 script:
   - pytest tests/
 after_success: |
-  if [ "$TRAVIS_PYTHON_VERSION" == "3.7" ]; then
+  if [ "$TRAVIS_PYTHON_VERSION" == "3.8" ]; then
     ./cc-test-reporter format-coverage .coverage.xml --input-type coverage.py
     ./cc-test-reporter upload-coverage
   fi
@@ -24,4 +25,4 @@ deploy:
   script: poetry publish --build -u $PYPI_USER -p $PYPI_PASSWORD
   on:
     tags: true
-    condition: "$TRAVIS_PYTHON_VERSION == 3.7"
+    condition: "$TRAVIS_PYTHON_VERSION == 3.8"

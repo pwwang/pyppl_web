@@ -105,3 +105,7 @@ poetry.lock
 
 # backup files
 *.bak
+
+# pyppl for development
+pyppl/
+pyppl
