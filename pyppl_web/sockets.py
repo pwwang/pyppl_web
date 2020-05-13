@@ -2,9 +2,7 @@
 from flask import request
 from flask_socketio import SocketIO, Namespace, emit
 from pyppl.config import config
-from .shared import logger, pipeline_status
-from .app import app
-
+from .shared import logger, pipeline_data
 # pylint: disable=no-self-use
 
 class RootNamespace(Namespace):
@@ -24,19 +22,21 @@ class RootNamespace(Namespace):
         logger.info(f'Client {request.remote_addr} disconnected.')
         if self.count == 0 and config.config.web_keepalive == 'auto':
             logger.warning("Closing server, as no clients connected.")
-        print(dir(self))
+            self.socketio.stop()
 
     def on_init_req(self):
         """Initial request for pipeline status"""
         logger.debug(f'Got request init_req from client {request.remote_addr}')
-        emit('init_resp', pipeline_status.dict())
+        emit('init_resp', pipeline_data.dict())
 
 # pylint: disable=invalid-name
-root = RootNamespace('/')
-
-# We don't want to monkey patch the naive python functions
-# which destuct some of the PyPPL functionalities
-# We might be swtiching to gevent or eventlet if PyPPL is
-# switching to greenlet.
-socketio = SocketIO(app, async_mode='threading', engineio_logger=False)
-socketio.on_namespace(root)
+def create_socket(app):
+    """Create a socketio object"""
+    # We don't want to monkey patch the naive python functions
+    # which destuct some of the PyPPL functionalities
+    # We might be swtiching to gevent or eventlet if PyPPL is
+    # switching to greenlet.
+    namespace = RootNamespace('/')
+    socketio = SocketIO(app, async_mode='threading', engineio_logger=False)
+    socketio.on_namespace(namespace)
+    return socketio, namespace

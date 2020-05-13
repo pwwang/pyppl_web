@@ -11,9 +11,10 @@ SOCKETIO_DEBUG = False
 FLASK_DEBUG = True
 
 DEFAULT_KEEPALIVE = "auto"
+DEFAULT_THEME = "semantic"
 
 # pylint: disable=invalid-name
 logger = Logger(plugin=PLUGIN)
-# pylint: enable=invalid-name
 
-pipeline_status = Diot()
+pipeline_data = Diot()
+# pylint: enable=invalid-name

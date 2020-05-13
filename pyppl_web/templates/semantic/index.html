@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+    <script type="text/javascript" src="{{ url_for('static', filename='js/socket.io.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/jquery.slim.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/semantic.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/socket_factory.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/tab_factory.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static', filename='css/semantic.min.css') }}">
+    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static', filename='css/main.css') }}">
+    <title>Document</title>
+</head>
+<body>
+    <div class="ui left attached fixed tabular menu inverted" id="header">
+        <div class="active item" data-tab="pipeline">Pipeline: <span id="pipeline_name"></span></div>
+        <div class="item" data-tab="pipeline2">Tab 2</div>
+    </div>
+    <div class="ui bottom attached loading active tab segment" data-tab="pipeline">
+        <p></p>
+        <p></p>
+    </div>
+    <div class="ui bottom attached tab segment" data-tab="pipeline2">
+        <p>1</p>
+        <p></p>
+    </div>
+</body>
+</html>

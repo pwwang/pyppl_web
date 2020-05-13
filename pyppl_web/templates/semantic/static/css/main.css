@@ -1,0 +1,22 @@
+#pipeline_name {
+    padding-left: 10px;
+    text-transform: uppercase;
+}
+
+#header {
+    height: 40px;
+}
+
+.ui.tab {
+    height: 100%;
+    margin: 0px !important;
+    border-width: 0px !important;
+}
+
+.ui.tabular.menu .item {
+    cursor: pointer;
+}
+
+.ui.tabular.menu .item:hover {
+    color: #ffffff;
+}
