@@ -5,12 +5,38 @@
 
 #header {
     height: 40px;
+    z-index: 999;
+}
+
+#cytoscape {
+    height: 100%;
+}
+
+.fullheight {
+    height: 100%;
+}
+
+.ui.tab-main-wrapper {
+    margin-left: 270px;
+    overflow-y: auto;
+    padding-left: 1px;
+    padding-right: 1px;
+}
+
+.ui.button {
+    padding: .75em .5em !important;
+}
+
+.ui.sidebar {
+    padding: 56px 15px 15px 15px !important;
+    overflow-y: auto;
 }
 
 .ui.tab {
     height: 100%;
     margin: 0px !important;
     border-width: 0px !important;
+    padding-top: 50px !important;
 }
 
 .ui.tabular.menu .item {
@@ -20,3 +46,61 @@
 .ui.tabular.menu .item:hover {
     color: #ffffff;
 }
+
+.ui.icon.close {
+    margin-left: 12px !important;
+    margin-right: -6px !important;
+}
+
+ul.jobs-ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+ul.jobs-ul > li {
+    float: left;
+    padding: 2px;
+    min-width: 40px;
+    background: #fff;
+    margin-right: 5px;
+    cursor: pointer;
+    text-align: center;
+    border: 1px solid #bdbdbd;
+}
+
+li.job.succeeded {
+    background-color: #d7ffe9;
+}
+
+li.job.failed {
+    background-color: rgb(255, 219, 213);
+}
+
+li.job.current {
+    border-color: #111;
+    padding: 1px;
+    border-width: 2px;
+}
+
+li.job.cached {
+    background-color: rgb(213, 231, 255);
+}
+
+li.job.running {
+    -webkit-animation: JOB-RUNNING 1s infinite;  /* Safari 4+ */
+    -moz-animation: JOB-RUNNING 1s infinite;  /* Fx 5+ */
+    -o-animation: JOB-RUNNING 1s infinite;  /* Opera 12+ */
+    animation: JOB-RUNNING 1s infinite;  /* IE 10+, Fx 29+ */
+}
+
+@keyframes JOB-RUNNING {
+    0%, 49% {
+      background-color: #d7ffe9;
+    }
+    50%, 100% {
+      background-color: #fff;
+    }
+  }
+
+

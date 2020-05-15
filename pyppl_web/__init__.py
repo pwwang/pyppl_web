@@ -10,7 +10,7 @@ from .shared import (logger, PLUGIN, DEFAULT_PORT, DEFAULT_THEME,
                      pipeline_data)
 from .app import create_app
 from .sockets import create_socket
-from .utils import auto_port
+from .utils import auto_port, PipelineData
 
 # pylint: disable=unused-argument,no-self-use
 
@@ -25,6 +25,7 @@ class PyPPLWeb:
         self.namespace = None
         self.app = None
         self.socketio = None
+        self.pdata = pipeline_data
         # make sure setup is running on runtime
         try:
             _get_plugin(PLUGIN)
@@ -58,10 +59,13 @@ class PyPPLWeb:
     @hookimpl
     def pyppl_prerun(self, ppl):
         """Try to start the server in a thread"""
-        # See https://github.com/miguelgrinberg/Flask-SocketIO/issues/876
-        # for not using standard theading lib
-        #self.thread = Thread(target=self.start_server)
-        #self.thread.start()
+        # construct initial pipeline data for rendering
+        self.pdata = PipelineData(ppl)
+        self.pdata.assemble()
+        # attach this to pipeline_data for sockets
+        pipeline_data.pipeline = self.pdata
+        # More detailed data for tab rendering
+        pipeline_data.procs = {}
         #
         # This should be the same as using standard threading.Thread,
         # as we are using async_mode='threading'
@@ -69,7 +73,6 @@ class PyPPLWeb:
         # allow thread to stop together with mean thread
         self.thread.daemon = True
         self.thread.start()
-        pipeline_data.name = ppl.name
 
     @hookimpl
     def pyppl_postrun(self, ppl):
@@ -87,9 +90,50 @@ class PyPPLWeb:
                         f"clients connected: {self.namespace.count}")
         else:
             logger.warning("Web server is stopping as well, "
-                        "since no clients connected.")
+                           "since no clients connected.")
             # .stop only works with context
             #socketio.stop()
             # we just leave it to exit, since our thread is daemonic
             return
         self.thread.join()
+
+    @hookimpl
+    def proc_prerun(self, proc):
+        """Initialize a proc"""
+        self.pdata.update_node(proc, 'init')
+        self.socketio.emit('pipeline_update', self.pdata.node_data(proc))
+
+    @hookimpl
+    def proc_postrun(self, proc, status):
+        """Update the status of the whole proc"""
+        self.pdata.update_node(proc, status)
+        self.socketio.emit('pipeline_update', self.pdata.node_data(proc))
+
+    @hookimpl
+    def job_init(self, job):
+        """Init some data for pipeline_data.procs"""
+        procdata = pipeline_data.procs.setdefault(job.proc.shortname, {})
+        jobs = procdata.setdefault('jobs', [None] * job.proc.size)
+        procdata['status'] = self.pdata.node_data(job.proc).get('status', '')
+        procdata['size'] = job.proc.size
+        jobs[job.index] = ['init', job.rc]
+
+    @hookimpl
+    def job_poll(self, job, status):
+        """Tell pipeline_data.procs that I am running"""
+        if status == 'running':
+            (pipeline_data.procs
+             [job.proc.shortname]
+             ['jobs']
+             [job.index][0]) = status
+
+    @hookimpl
+    def job_done(self, job, status):
+        """Update status on the client"""
+        self.pdata.update_node(job.proc, status)
+        nodedata = self.pdata.node_data(job.proc)
+        self.socketio.emit('pipeline_update', nodedata)
+
+        procdata = pipeline_data.procs[job.proc.shortname]
+        procdata['status'] = nodedata.get('status', procdata['status'])
+        procdata['jobs'][job.index] = [status, job.rc]

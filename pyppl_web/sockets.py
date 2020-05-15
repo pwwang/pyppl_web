@@ -14,12 +14,14 @@ class RootNamespace(Namespace):
     def on_connect(self):
         """While we are connected"""
         self.count += 1
-        logger.info(f'Client {request.remote_addr} connected.')
+        logger.info(f'Client {request.remote_addr} connected. '
+                    f'Connected clients: {self.count}')
 
     def on_disconnect(self):
         """While we are disconnected"""
         self.count -= 1
-        logger.info(f'Client {request.remote_addr} disconnected.')
+        logger.info(f'Client {request.remote_addr} disconnected. '
+                    f'Connected clients: {self.count}')
         if self.count == 0 and config.config.web_keepalive == 'auto':
             logger.warning("Closing server, as no clients connected.")
             self.socketio.stop()
@@ -27,7 +29,16 @@ class RootNamespace(Namespace):
     def on_init_req(self):
         """Initial request for pipeline status"""
         logger.debug(f'Got request init_req from client {request.remote_addr}')
-        emit('init_resp', pipeline_data.dict())
+        emit('init_resp', pipeline_data.pipeline.dict())
+
+    def on_tab_proc_init_req(self, data):
+        """Send the data needed to init a proc tab"""
+        logger.debug('Got request tab_proc_init_req from client '
+                     f'{request.remote_addr}')
+        resp = pipeline_data.procs.get(data['proc'], {'status': ''})
+        resp['proc'] = data['proc']
+        emit('tab_proc_init_resp', resp)
+
 
 # pylint: disable=invalid-name
 def create_socket(app):

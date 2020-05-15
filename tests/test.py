@@ -4,10 +4,17 @@ from pyppl_web import PyPPLWeb
 pweb = PyPPLWeb()
 config_plugins(pweb)
 proc = Proc()
-proc.input = {'a': [1]}
+proc.input = {'a': [1,2,3,4,5]}
 proc.output = 'a:var:1'
-proc.script = 'sleep 10'
+proc.script = 'sleep 5'
 proc.cache = False
 
-PyPPL(logger_level='debug').start(proc).run()
+proc2 = Proc()
+proc2.depends = proc
+proc2.input = 'b:var'
+proc2.output = 'b:var:2'
+proc2.script = 'sleep 5'
+proc2.cache = False
+
+PyPPL(logger_level='debug', forks=2).start(proc).run()
 

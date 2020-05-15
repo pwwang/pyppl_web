@@ -1,9 +1,14 @@
 
 (function($){
-    var socket = io();
+    // connect earlier
+    var socketio = io();
     $(document).ready(function(){
-        socket_factory($, socket);
-        new tab_factory($, $("#header"));
 
+        var tab = window.tab = new window.Tab($("#header"));
+        delete window.Tab
+
+        var socket = window.socket = new window.Socket(socketio);
+        socket.listen();
+        delete window.Socket;
     });
 })(jQuery);
