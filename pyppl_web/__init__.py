@@ -111,21 +111,47 @@ class PyPPLWeb:
 
     @hookimpl
     def job_init(self, job):
-        """Init some data for pipeline_data.procs"""
+        """Initiate status for proc"""
         procdata = pipeline_data.procs.setdefault(job.proc.shortname, {})
         jobs = procdata.setdefault('jobs', [None] * job.proc.size)
         procdata['status'] = self.pdata.node_data(job.proc).get('status', '')
         procdata['size'] = job.proc.size
+        procdata['workdir'] = str(job.proc.workdir)
+        jobs[job.index] = ['', job.rc]
+
+    @hookimpl
+    def job_build(self, job):
+        """Init some data for pipeline_data.procs"""
+        procdata = pipeline_data.procs[job.proc.shortname]
+        jobs = procdata.setdefault('jobs', [None] * job.proc.size)
         jobs[job.index] = ['init', job.rc]
+
+        if procdata.get('watch'):
+            self.socketio.emit('job_status_change',
+                               {'proc': job.proc.shortname,
+                                'job': job.index, # 0-based
+                                'rc': job.rc,
+                                'status': 'init'})
+
+        if procdata['status'] == '': # only do once, not threadsafe!
+            procdata['status'] = 'init'
+            procdata['proc'] = job.proc.shortname
+            self.socketio.emit('tab_proc_init_resp', procdata)
 
     @hookimpl
     def job_poll(self, job, status):
         """Tell pipeline_data.procs that I am running"""
         if status == 'running':
-            (pipeline_data.procs
-             [job.proc.shortname]
-             ['jobs']
-             [job.index][0]) = status
+            procdata = pipeline_data.procs[job.proc.shortname]
+            prev_status = procdata['jobs'][job.index][0]
+            procdata['jobs'][job.index][0] = status
+            # only send once
+            if procdata.get('watch') and prev_status != 'running':
+                self.socketio.emit('job_status_change',
+                                   {'proc': job.proc.shortname,
+                                    'job': job.index,
+                                    'rc': job.rc,
+                                    'status': status})
 
     @hookimpl
     def job_done(self, job, status):
@@ -137,3 +163,10 @@ class PyPPLWeb:
         procdata = pipeline_data.procs[job.proc.shortname]
         procdata['status'] = nodedata.get('status', procdata['status'])
         procdata['jobs'][job.index] = [status, job.rc]
+
+        if procdata.get('watch'):
+            self.socketio.emit('job_status_change',
+                               {'proc': job.proc.shortname,
+                                'job': job.index,
+                                'rc': job.rc,
+                                'status': status})

@@ -16,6 +16,10 @@
     height: 100%;
 }
 
+.ui.hidden, .ui.invisible {
+    display: none !important;
+}
+
 .ui.tab-main-wrapper {
     margin-left: 270px;
     overflow-y: auto;
@@ -62,15 +66,20 @@ ul.jobs-ul > li {
     float: left;
     padding: 2px;
     min-width: 40px;
-    background: #fff;
-    margin-right: 5px;
+    background-color: rgb(199, 199, 199);
+    margin-right: 4px;
     cursor: pointer;
     text-align: center;
     border: 1px solid #bdbdbd;
+    margin-bottom: 3px;
+}
+
+li.job.init {
+    background-color: #ffffff;
 }
 
 li.job.succeeded {
-    background-color: #d7ffe9;
+    background-color: #5bd68a;
 }
 
 li.job.failed {
@@ -87,6 +96,19 @@ li.job.cached {
     background-color: rgb(213, 231, 255);
 }
 
+.ui.buttons > .ui.button {
+    width: 120px;
+    border-right: 1px solid white;
+}
+
+.ui.buttons.top > .ui.button {
+    margin-bottom: 2px;
+}
+
+.ui.buttons.bottom > .ui.button {
+    margin-top: 2px;
+}
+
 li.job.running {
     -webkit-animation: JOB-RUNNING 1s infinite;  /* Safari 4+ */
     -moz-animation: JOB-RUNNING 1s infinite;  /* Fx 5+ */
@@ -96,10 +118,10 @@ li.job.running {
 
 @keyframes JOB-RUNNING {
     0%, 49% {
-      background-color: #d7ffe9;
+      background-color: #c6ee7b;
     }
     50%, 100% {
-      background-color: #fff;
+      background-color: rgb(109, 188, 253);
     }
   }
 

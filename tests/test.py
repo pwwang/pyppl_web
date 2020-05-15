@@ -4,7 +4,7 @@ from pyppl_web import PyPPLWeb
 pweb = PyPPLWeb()
 config_plugins(pweb)
 proc = Proc()
-proc.input = {'a': [1,2,3,4,5]}
+proc.input = {'a': list(range(20))}
 proc.output = 'a:var:1'
 proc.script = 'sleep 5'
 proc.cache = False

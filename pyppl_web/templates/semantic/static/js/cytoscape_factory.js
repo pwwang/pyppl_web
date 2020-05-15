@@ -141,6 +141,7 @@
             var nodedata = node.data();
             var pbar_color = PBAR_COLORS[nodedata.status];
             var perc = 100.0 * nodedata.done / nodedata.size;
+            perc = perc.toFixed(2);
 
             node.style({
                 'background-color': 'white',
