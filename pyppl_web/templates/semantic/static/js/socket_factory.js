@@ -6,20 +6,25 @@
         }
 
         listen() {
-            var that = this;
-            this.socket.on('connect', () => {that.connect()});
-            this.socket.on('disconnect', () => {that.disconnect()});
-            this.socket.on('init_resp', (data) => {that.init_resp(data)});
+            this.socket.on('connect', () => {this.connect()});
+            this.socket.on('disconnect', () => {this.disconnect()});
+            this.socket.on('init_resp', (data) => {this.init_resp(data)});
             this.socket.on('pipeline_update',
-                           (data) => {that.pipeline_update(data)});
+                           (data) => {this.pipeline_update(data)});
             this.socket.on('tab_proc_init_resp',
-                           (data) => {that.tab_proc_init_resp(data)});
+                           (data) => {this.tab_proc_init_resp(data)});
             this.socket.on('job_status_change',
-                           (data) => {that.job_status_change(data)});
+                           (data) => {this.job_status_change(data)});
             this.socket.on('reset_rc_resp',
-                           (data) => {that.reset_rc_resp(data)});
+                           (data) => {this.reset_rc_resp(data)});
             this.socket.on('remove_lock_resp',
-                           (data) => {that.remove_lock_resp(data)});
+                           (data) => {this.remove_lock_resp(data)});
+            this.socket.on('proc_detail_resp',
+                           (data) => {this.proc_detail_resp(data)});
+            this.socket.on('job_script_resp',
+                           (data) => {this.job_script_resp(data)});
+            this.socket.on('job_script_running_resp',
+                           (data) => {this.job_script_running_resp(data)});
         }
 
         connect() {
@@ -32,6 +37,19 @@
             console.log('Disconnected from server.')
             if (window.confirm('Disconnected from server, reload the page?')) {
                 window.location.reload();
+            }
+        }
+
+        proc_detail_req(proc) {
+            console.log('Emitting proc_detail_req');
+            this.socket.emit('proc_detail_req', {proc: proc});
+        }
+
+        proc_detail_resp(data) {
+            console.log('Received proc_detail_resp for ' + data.proc);
+            var jobfuncs = window.tab.jobfuncs(data.proc);
+            if (jobfuncs !== undefined) {
+                jobfuncs.proc_detail_resp(data);
             }
         }
 
@@ -57,9 +75,10 @@
             this.socket.emit('reset_rc_req', data);
         }
         reset_rc_resp(data) {
-            if (window.tab.cached[data.proc] === undefined ||
-                    window.tab.cached[data.proc].jobfuncs === undefined)
-                window.tab.cached[data.proc].jobfuncs.reset_rc_resp(data);
+            var jobfuncs = window.tab.jobfuncs(data.proc);
+            if (jobfuncs !== undefined) {
+                jobfuncs.reset_rc_resp(data);
+            }
         }
         remove_lock_req(data) {
             this.socket.emit('remove_lock_req', data);
@@ -69,6 +88,32 @@
             if (jobfuncs !== undefined) {
                 jobfuncs.remove_lock_resp(data);
             }
+        }
+
+        job_script_resp(data) {
+            var jobfuncs = window.tab.jobfuncs(data.proc);
+            if (jobfuncs !== undefined) {
+                jobfuncs.job_script_resp(data);
+            }
+        }
+        job_script_req(data) {
+            console.log('Emitting job_script_req');
+            this.socket.emit('job_script_req', data);
+        }
+        job_script_running_resp(data) {
+            var jobfuncs = window.tab.jobfuncs(data.proc);
+            if (jobfuncs !== undefined) {
+                jobfuncs.job_script_running_resp(data);
+            }
+        }
+        job_script_running_req(data) {
+            console.log('Emitting job_script_running_req');
+            this.socket.emit('job_script_running_req', data);
+        }
+
+        job_script_run_req(data) {
+            console.log('Emitting job_script_run_req');
+            this.socket.emit('job_script_run_req', data);
         }
 
         init_resp(data) {
@@ -83,11 +128,6 @@
                 var cyto = window.cyto = new window.Cyto($("#cytoscape"))
                 cyto.assemble(data).ready();
                 delete window.Cyto;
-            } else {
-                // reload the page
-                if (window.confirm('Pipeline restarted, reload the page?')) {
-                    window.location.reload();
-                }
             }
         }
 
@@ -95,7 +135,13 @@
             // proc: procid, size: # jobs
             // update in graph
             console.debug('Recieved pipeline_update for '+ data.proc);
-            window.cyto.pipeline_update(data);
+            if (window.cyto === undefined) {
+                console.debug('Cytoscape not initialized yet, try it.')
+                // graph not init'ed, let redo it
+                this.socket.emit('init_req');
+            } else {
+                window.cyto.pipeline_update(data);
+            }
         }
     }
 

@@ -66,7 +66,7 @@ ul.jobs-ul > li {
     float: left;
     padding: 2px;
     min-width: 40px;
-    background-color: rgb(199, 199, 199);
+    background-color: rgb(212, 212, 212);
     margin-right: 4px;
     cursor: pointer;
     text-align: center;
@@ -84,6 +84,11 @@ li.job.succeeded {
 
 li.job.failed {
     background-color: rgb(255, 219, 213);
+}
+
+li.job.rc-changed {
+    font-style: italic;
+    border-radius: 5px;
 }
 
 li.job.current {
@@ -109,18 +114,39 @@ li.job.cached {
     margin-top: 2px;
 }
 
+.ui.button.toggle.active {
+    background-color: #7d847e !important;
+}
+
 li.job.running {
-    -webkit-animation: JOB-RUNNING 1s infinite;  /* Safari 4+ */
-    -moz-animation: JOB-RUNNING 1s infinite;  /* Fx 5+ */
-    -o-animation: JOB-RUNNING 1s infinite;  /* Opera 12+ */
-    animation: JOB-RUNNING 1s infinite;  /* IE 10+, Fx 29+ */
+    -webkit-animation: JOB-RUNNING .5s infinite;  /* Safari 4+ */
+    -moz-animation: JOB-RUNNING .5s infinite;  /* Fx 5+ */
+    -o-animation: JOB-RUNNING .5s infinite;  /* Opera 12+ */
+    animation: JOB-RUNNING .5s infinite;  /* IE 10+, Fx 29+ */
+}
+
+.editor {
+    border-radius: 6px;
+    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+    font-family: 'Source Code Pro', monospace;
+    font-size: 14px;
+    font-weight: 400;
+    height: 340px;
+    letter-spacing: normal;
+    line-height: 20px;
+    padding: 10px;
+    resize: none !important;
+    tab-size: 4;
 }
 
 @keyframes JOB-RUNNING {
-    0%, 49% {
+    0%, 32% {
       background-color: #c6ee7b;
     }
-    50%, 100% {
+    33%, 66% {
+        background-color: #f8b6ef;
+      }
+    67%, 100% {
       background-color: rgb(109, 188, 253);
     }
   }

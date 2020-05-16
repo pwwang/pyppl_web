@@ -6,7 +6,7 @@ config_plugins(pweb)
 proc = Proc()
 proc.input = {'a': list(range(20))}
 proc.output = 'a:var:1'
-proc.script = 'sleep 5'
+proc.script = ''.join(f'echo {i}; sleep 1; ' for i in range(10))
 proc.cache = False
 
 proc2 = Proc()

@@ -1,6 +1,8 @@
 """Web client to monitor pipeline processes for PyPPL"""
 from threading import Thread
+from pathlib import Path
 from flask_socketio import SocketIO
+from diot import Diot
 from pyppl.exception import PluginNoSuchPlugin
 from pyppl.plugin import hookimpl, _get_plugin
 from pyppl.logger import Logger
@@ -102,6 +104,22 @@ class PyPPLWeb:
         """Initialize a proc"""
         self.pdata.update_node(proc, 'init')
         self.socketio.emit('pipeline_update', self.pdata.node_data(proc))
+        # init proc data
+        pipeline_data.procs[proc.shortname] = Diot()
+        procdata = pipeline_data.procs[proc.shortname]
+        procdata.jobs = [['', ''] for _ in range(proc.size)]
+        procdata.status = self.pdata.node_data(proc).get('status', '')
+        procdata.props = {
+            key: str(getattr(proc, key))
+            for key in list(proc._setcounter) + ['workdir', 'size']
+        }
+        procdata.props.workdir_abs = str(Path(procdata.props.workdir).resolve())
+        procdata.args = {key: str(val) for key, val in proc.args.items()}
+        procdata.envs = {key: str(val) for key, val in proc.envs.items()}
+        procdata.config = {key: str(val) for key, val in proc.config.items()}
+        procdata.watch = False
+        procdata.proc = proc.shortname
+
 
     @hookimpl
     def proc_postrun(self, proc, status):
@@ -109,33 +127,23 @@ class PyPPLWeb:
         self.pdata.update_node(proc, status)
         self.socketio.emit('pipeline_update', self.pdata.node_data(proc))
 
-    @hookimpl
-    def job_init(self, job):
-        """Initiate status for proc"""
-        procdata = pipeline_data.procs.setdefault(job.proc.shortname, {})
-        jobs = procdata.setdefault('jobs', [None] * job.proc.size)
-        procdata['status'] = self.pdata.node_data(job.proc).get('status', '')
-        procdata['size'] = job.proc.size
-        procdata['workdir'] = str(job.proc.workdir)
-        jobs[job.index] = ['', job.rc]
 
     @hookimpl
     def job_build(self, job):
         """Init some data for pipeline_data.procs"""
         procdata = pipeline_data.procs[job.proc.shortname]
-        jobs = procdata.setdefault('jobs', [None] * job.proc.size)
-        jobs[job.index] = ['init', job.rc]
+        procdata.jobs[job.index] = ['init', job.rc]
 
-        if procdata.get('watch'):
+        if procdata.watch:
             self.socketio.emit('job_status_change',
                                {'proc': job.proc.shortname,
                                 'job': job.index, # 0-based
                                 'rc': job.rc,
                                 'status': 'init'})
 
-        if procdata['status'] == '': # only do once, not threadsafe!
-            procdata['status'] = 'init'
-            procdata['proc'] = job.proc.shortname
+        if procdata.status == '':
+            # just in case tab of the proc has not init'ed
+            procdata.status = 'init'
             self.socketio.emit('tab_proc_init_resp', procdata)
 
     @hookimpl
@@ -143,10 +151,10 @@ class PyPPLWeb:
         """Tell pipeline_data.procs that I am running"""
         if status == 'running':
             procdata = pipeline_data.procs[job.proc.shortname]
-            prev_status = procdata['jobs'][job.index][0]
-            procdata['jobs'][job.index][0] = status
+            prev_status = procdata.jobs[job.index][0]
+            procdata.jobs[job.index][0] = status
             # only send once
-            if procdata.get('watch') and prev_status != 'running':
+            if procdata.watch and prev_status != 'running':
                 self.socketio.emit('job_status_change',
                                    {'proc': job.proc.shortname,
                                     'job': job.index,
@@ -161,10 +169,11 @@ class PyPPLWeb:
         self.socketio.emit('pipeline_update', nodedata)
 
         procdata = pipeline_data.procs[job.proc.shortname]
-        procdata['status'] = nodedata.get('status', procdata['status'])
-        procdata['jobs'][job.index] = [status, job.rc]
+        procdata.status = nodedata.get('status', procdata.status)
+        procdata.jobs[job.index][0] = status
+        procdata.jobs[job.index][1] = job.rc
 
-        if procdata.get('watch'):
+        if procdata.watch:
             self.socketio.emit('job_status_change',
                                {'proc': job.proc.shortname,
                                 'job': job.index,

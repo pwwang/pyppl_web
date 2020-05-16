@@ -1,5 +1,7 @@
 """Some utility functions for pyppl_web"""
+from typing import Union
 from socket import socket
+from cmdy import Cmdy
 from pyppl import Proc, PyPPL
 from pyppl.jobmgr import STATES
 
@@ -8,6 +10,28 @@ def auto_port() -> int:
     with socket() as sock:
         sock.bind(('', 0))
         return sock.getsockname()[1]
+
+def read_cmdout(cmd: Cmdy, timeout: float = 1.0) -> Union[str, bool]:
+    """Try to read a chunk of output of the cmd
+    Returns False if we hit the end
+    """
+    # cmd has to have _bg=True and _iter=True
+    ret = ''
+    query_timeout = .1
+    for _ in range(int(timeout / query_timeout)):
+        try:
+            line = cmd.next(timeout=.1)
+        except StopIteration:
+            if not ret:
+                return False
+            return ret
+
+        if line is None:
+            continue
+
+        if line:
+            ret += line
+    return ret
 
 class PipelineData:
     """Since we don't have hidden nodes, so we define a new class
