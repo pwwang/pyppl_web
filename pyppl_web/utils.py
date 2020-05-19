@@ -34,7 +34,7 @@ def read_cmdout(cmd: Cmdy, timeout: float = 1.0) -> Tuple[str, bool]:
 class PipelineData:
     """Since we don't have hidden nodes, so we define a new class
     other than the one used in pyppl_flowchart"""
-    ROOTGROUP: str = "__ROOT__"
+    ROOTGROUP: str = "PYPPL_ROOTGROUP"
 
     def __init__(self, ppl: PyPPL):
         # {group => nodeid => node data}
@@ -53,6 +53,8 @@ class PipelineData:
         for node in self.ppl.procs:
             if node.config.get('flowchart_hide'):
                 self.add_node(node, is_hidden=True)
+            else:
+                self.add_node(node)
             # edges
             if not node.nexts:
                 continue

@@ -1,12 +1,17 @@
-from pyppl import config_plugins, PyPPL, Proc
+from pyppl import config_plugins, PyPPL, Proc, ProcSet
 from pyppl_web import PyPPLWeb
 
 pweb = PyPPLWeb()
 config_plugins(pweb)
 proc = Proc()
 proc.input = {'a': list(range(6))}
-proc.output = 'a:var:1'
-proc.script = ''.join(f'echo {{{{job.index}}}}-{i}; sleep .1; ' for i in range(100))
+proc.output = 'fav:file:{{i.a}}.png'
+proc.script = '''
+wget http://localhost:8527/images/favicon.png -O {{o.fav}}
+if [[ {{job.index}} -eq 3 ]]; then
+    exit 1;
+fi
+'''
 proc.cache = False
 
 proc2 = Proc()
@@ -15,6 +20,9 @@ proc2.input = 'b:var'
 proc2.output = 'b:var:2'
 proc2.script = 'sleep 5'
 proc2.cache = False
+
+ps = ProcSet(proc, proc2)
+ps.depends = proc2
 
 PyPPL(logger_level='debug', forks=2).start(proc).run()
 

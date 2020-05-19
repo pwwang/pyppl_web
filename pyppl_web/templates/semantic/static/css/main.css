@@ -10,6 +10,14 @@
 
 #cytoscape {
     height: 100%;
+    position: relative;
+}
+
+.cyto-exporter {
+    float: left;
+    z-index: 1001;
+    margin: 10px;
+    position: absolute !important;
 }
 
 .fullheight {
@@ -25,6 +33,12 @@
     overflow-y: auto;
     padding-left: 1px;
     padding-right: 1px;
+    display: flex;
+    flex-direction: column;
+}
+.ui.tab-main{
+    flex-grow: 1;
+    overflow-y: hidden;
 }
 
 .ui.button {
@@ -150,7 +164,13 @@ li.job.running {
 }
 
 .code p {
-    line-height: .5em;
+    line-height: 1.2em;
+}
+
+.logger {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
 }
 
 .logger > .code {
@@ -160,7 +180,8 @@ li.job.running {
                 0 3px 1px -2px rgba(0, 0, 0, 0.2);
     padding: 16px 10px;
     margin-top: 8px;
-    overflow-y: auto;
+    flex-grow: 1;
+    overflow: auto;
 }
 
 @keyframes JOB-RUNNING {
@@ -177,9 +198,14 @@ li.job.running {
 
 .ui.modal .scrolling.content {
     min-height: calc(75vh);
+    display: flex;
+    flex-direction: column;
+}
+.ui.modal .scrolling.content .code {
+    flex-grow: 1;
 }
 .ui.modal.log .content p {
-    line-height: .5em;
+    line-height: 1.2em;
     font-family: consolas, Monaco, monospace;
 }
 
@@ -190,24 +216,75 @@ li.job.running {
     padding: 8px 4px;
 }
 
+.ui.proc-detail {
+    height: 100%;
+    overflow: auto;
+}
+
+.ui.form.job-script {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.ui.form.job-script > .field:first-child {
+    flex-grow: 1;
+}
+
 .ui.form.action.logger {
     display: inline-block;
     width: 255px;
     text-align: left;
 }
 
+.ui.filebrowser {
+    height: 103%;
+    overflow-y: hidden;
+}
+
 .ui.filebrowser .ui.list {
     margin: 0;
+    padding-top: .5em !important;
 }
 
-.ui.filebrowser {
-    height: 700px;
-    overflow-y: auto;
+.ui.filebrowser .ui.list .icon {
+    float: left;
 }
 
-.ui.filebrowser > .column.fileview {
-    width: calc(100% - 270px) !important;
+.ui.filebrowser .ui.list .header {
+    cursor: pointer;
+}
+
+.column.fileview {
+    flex-grow: 1;
+    height: 100% !important;
+    overflow: hidden;
+    display: flex !important;
+    flex-direction: column;
+}
+
+.column.fileview > .ui.previewer {
+    flex-grow: 1;
     overflow: auto;
+}
+
+.column.fileview .ui.breadcrumb {
+    display: block;
+    margin-bottom: 6px;
+}
+.column.fileview .ui.breadcrumb > div {
+    display: inline-block;
+}
+.column.fileview .ui.breadcrumb > div.active {
+    font-weight: bold;
+}
+.column.fileview .ui.operations {
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid #efefef !important;
+}
+.column.fileview .ui.operations .ui.button {
+    width: auto !important;
+    padding: 8px 20px !important;
 }
 
 .ui.filebrowser > .ui.column.list {
@@ -227,7 +304,8 @@ li.job.running {
 }
 
 .fileview .code p {
-    line-height: 1em;
+    line-height: 1.4em;
+    margin: 0 0 0.2em;
 }
 
 .left {

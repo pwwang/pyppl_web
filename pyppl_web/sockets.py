@@ -1,5 +1,4 @@
 """SocketIO operations for pyppl_web"""
-import base64
 from pathlib import Path
 from diot import Diot
 import cmdy
@@ -12,7 +11,8 @@ from .utils import read_cmdout
 
 def _filetype(path):
     """Determine the file type"""
-    if path.suffix in ('.png', '.jpg', '.jpeg', '.bmp', '.tif', '.tiff'):
+    if path.suffix in ('.png', '.jpg', '.jpeg', '.bmp',
+                       '.tif', '.tiff', '.svg'):
         return 'image'
     if '.script' in path.name:
         with path.open('rt') as fpath:
@@ -24,6 +24,10 @@ def _filetype(path):
             Rscript='r',
             sh='bash'
         ).get(intepreter, intepreter.lower())
+    if '.stdout' in path.name:
+        return 'stdout'
+    if '.stderr' in path.name:
+        return 'stderr'
     return 'file'
 
 class RootNamespace(Namespace):
@@ -268,7 +272,7 @@ class RootNamespace(Namespace):
                     pass
 
         logger.debug('Sending response logger_response to client '
-                     f'{request.remote_addr} with data {resp}')
+                     f'{request.remote_addr}')
         emit('logger_response', resp)
 
     def on_job_script_save_req(self, data):
@@ -304,18 +308,19 @@ class RootNamespace(Namespace):
         workdir = pipeline_data.procs[data['proc']].props.workdir
         jobdir = Path(workdir) / str(data.job)
         path = jobdir.joinpath(data.path)
+        resp.name = path.name
         if data.type == 'folder':
             resp.content = []
             for item in path.iterdir():
                 resp.content.append(Diot(
                     name=item.name,
                     path=(f"{data.path}/{item.name}" if data.path
-                           else item.name),
+                          else item.name),
                     type='folder' if item.is_dir() else _filetype(item)
                 ))
         elif data.type == 'image':
             with open(path, 'rb') as fimg:
-                resp.content = base64.b64decode(fimg.read()).decode()
+                resp.content = fimg.read()
         elif path.stat().st_size > 1024 * 1024:
             resp.type = False
         else:

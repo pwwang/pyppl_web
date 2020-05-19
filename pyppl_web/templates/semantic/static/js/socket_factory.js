@@ -147,7 +147,7 @@
                     if (part === '') {
                         break;
                     }
-                    obj = root.children[part];
+                    obj = obj.children[part];
                 }
                 obj.response(data);
             }
@@ -155,7 +155,7 @@
         run_request(data) {
             // eleid, cmd
             console.log('Emitting run_request')
-            console.debug(data);
+            // console.debug(data);
             this.socket.emit('run_request', data);
         }
 

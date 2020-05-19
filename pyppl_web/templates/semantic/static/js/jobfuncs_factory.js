@@ -115,7 +115,7 @@
         }
 
         _not_started() {
-            if (this.job_status() == '') {
+            if (this.job_status() === '') {
                 this.$main.html('Job has not started yet.');
                 return true;
             }
@@ -130,23 +130,32 @@
         }
 
         list_jobdir_ui() {
+            if (this._not_started()) {
+                return;
+            }
             var $filebrowser = $(`<div class="filebrowser"></div>`);
             this.$main.html($filebrowser);
             var that = this;
             $filebrowser.filebrowser({
-                request: function() {
+                proc: that.proc,
+                job: that.job_index(),
+                request: function(download=false) {
                     window.socket.filetree_req({
                         proc: that.proc,
                         job: that.job_index(),
                         path: this.path,
                         type: this.type,
-                        rootid: this.rootid
+                        rootid: this.rootid,
+                        download: download
                     });
                 }
             });
         }
 
         show_logger_ui(type) {
+            if (this._not_started()) {
+                return;
+            }
             var that = this;
             var logger = $(`<div class="${type} logger"></div>`)
                 .appendTo(this.$main.html('')).logger({
@@ -159,7 +168,7 @@
                         })
                     }
                 }).logger();
-            logger.$main.height($(window).height() - 300);
+
             logger.$header.find('.kill').before(`
                 <div class="ui logger action form">
                     <div class="inline field">
@@ -294,7 +303,9 @@
                 </form>
             `;
             this.$main.html(html);
-            this.$main.find('.editor').codeeditor({
+            // 100% not working
+            var height = this.$main.find('.editor').height();
+            this.$main.find('.editor').height(height).codeeditor({
                 init_code: 'Loading  ...'
             }).codeeditor();
             // .ui.modal.log will jump to body by semantic ui

@@ -13,6 +13,27 @@
         stderr: 'file alternate red'
     }
 
+    var _mimetype = function(name) {
+        var parts = name.split(/.+\./);
+        if (parts.length < 2) {
+            return 'plain/text';
+        }
+        var ext = parts[1];
+        if (ext in ['jpe', 'jpeg']) {
+            return 'image/jpeg';
+        }
+        if (ext == 'svg') {
+            return 'image/svg+xml';
+        }
+        if (ext == 'tif') {
+            return 'image/tiff';
+        }
+        if (ext == 'ico') {
+            return 'image/icon';
+        }
+        return `image/${ext}`;
+    }
+
     class FileTreeItem {
         constructor($obj, data, request, $view, rootid) {
             // add unique id to this $obj, so that later this can be retrieved
@@ -21,6 +42,7 @@
             this.$view = $view;
             this.type = data.type;
             this.rootid = rootid;
+            this.name = data.name;
 
             var $wrapper = $(`
                 <div class="item">
@@ -50,40 +72,95 @@
         }
 
         _operations() {
+            var parts = this.path.split('/');
+            parts.pop(); // remove the name, we will add it using this.name
+            var breads = '';
+            for (var part of parts) {
+                breads += `<div class="selection">${part}</div>`;
+                breads += `<div class="divider">/</div>`;
+            }
+            breads += `<div class="active selection">${this.name}</div>`;
+            var root = $('#' + this.rootid).filebrowser();
+            // console.log(this.rootid)
+            // console.log(root)
             var html = `
-                <div class="ui operations buttons"></div>
+                <div class="ui operations">
+                    <div class="ui breadcrumb">
+                        <div class="selection">${root.options.proc}</div>
+                        <div class="divider">/</div>
+                        <div class="selection">${root.options.job}</div>
+                        <div class="divider">/</div>
+                        ${breads}
+                    </div>
+                    <div class="ui buttons">
+                        <button class="ui button basic blue open">Open</button>
+                        <button class="ui button basic disabled green open-newwin">Open in new window</button>
+                        <button class="ui button basic violet download">Download</button>
+                    </div>
+                </div>
                 <div class="ui previewer"></div>
             `;
             this.$view.html(html);
-            this.status = 'operations'
+            this.$previewer = this.$view.children('.ui.previewer');
+            var $button_open = this.$view.find('.ui.button.open');
+            var $button_opennewwin = this.$view.find('.ui.button.open-newwin');
+            var $button_download = this.$view.find('.ui.button.download');
+            if (this.type != 'image') {
+                $button_opennewwin.hide();
+            }
+            $button_open.on('click', () => this._preview());
+            $button_opennewwin.on('click', () => {
+                window.open(this.$previewer.children('img').attr('src'), '_blank');
+            });
+            $button_download.on('click', () => this._download_req());
+            this.status = 'operations';
         }
 
         _preview() {
-            this.$view.children('.ui.previewer').addClass('loading');
+            this.$previewer.html('Loading ...');
             this.request.apply(this);
-            this.status = 'preview'
+            this.status = 'preview';
+        }
+
+        _download_req() {
+            this.$view.find('.ui.button.download').addClass('disabled');
+            this.request.call(this, true);
         }
 
         response(data) {
+            // console.log(data)
+            if (data.download) {
+                var blob = new Blob([data.content], {type: _mimetype(data.name)});
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement("a");
+                a.href = url;
+                a.download = this.name; //file name
+                a.click();
+                this.$view.find('.ui.button.download').removeClass('disabled');
+                return;
+            }
             if (data.type == 'image') {
-                this.$view.children('.ui.previewer').html(`
-                    <img src="${data.content}" />
-                `)
+                var blob = new Blob([data.content], {type: _mimetype(data.name)});
+                var url = URL.createObjectURL(blob);
+                this.$previewer.html(`
+                    <img src="${url}" />
+                `);
+                this.$view.find('.ui.button.open-newwin').removeClass('disabled');
             } else if (data.type in ['python', 'bash', 'fish', 'r']) {
                 var $codeeditor = $(`<div class="ui editor ${data.type}"></div>`);
-                this.$view.html($codeeditor);
+                this.$previewer.html($codeeditor);
                 var editor = $codeeditor.codeeditor({}).codeeditor();
                 editor.updateCode(data.content);
                 editor.updateLang(data.type);
             } else if (data.type === false) {
-                this.$view.html(`
+                this.$previewer.html(`
                     <div class="ui red message">
                         Preview not supported, download it and view it locally.
                     </div>
                 `);
             } else {
                 var $log = $(`<div class="ui code logger"></div>`);
-                this.$view.html($log);
+                this.$previewer.html($log);
                 var logger = $log.logger({}).logger();
                 logger.$header.hide();
                 logger.response({isrunning: 'done', reqlog: 'all', log: data.content});
@@ -106,22 +183,26 @@
             super($obj, data, request, $view, rootid);
 
             this.status = 'collapsed';
+            this.$header.text(this.$header.text() + '/');
             this.$header.after(`<div class="list"></div>`);
-            this.$content = this.$header.next('.list');
+            this.$content = this.$header.next('.list').hide();
             this.type = 'folder';
+            this.$icon.removeClass().addClass('folder icon');
             this.children = {};
         }
 
         response(data) {
             // append content/children
+            // console.log(data)
             this.$icon.removeClass('spinner').addClass('folder open')
 
             for (var item of data.content) {
                 var child = new (item.type == 'folder' ? FileTreeFolder : FileTreeItem)(
                     this.$content,
                     item,
-                    this.options.request,
-                    this.$view
+                    this.request,
+                    this.$view,
+                    this.rootid
                 );
                 this.children[item.name] = child;
             }
@@ -135,9 +216,11 @@
                     this.$icon.removeClass('folder open').addClass('spinner');
                     this.request.apply(this);
                 }
+                this.status = 'expanded';
             } else {
                 this.$icon.removeClass('spinner open').addClass('folder');
                 this.$content.hide();
+                this.status = 'collapsed';
             }
         }
     }
@@ -148,9 +231,18 @@
             $obj.attr('id', this.id);
             this.options = options;
             $obj.addClass("ui two column grid");
-            this.$treeview = $(`
-                <div class="column filetree disabled ui list">Loading ...</div>
+            var $root_tree = $(`
+                <div class="column filetree disabled ui list">
+                    <div class="item">
+                        <i class="play icon"></i>
+                        <div class="content">
+                            <div class="header">${options.proc}/${options.job}</div>
+                            <div class="list">Loading ...</div>
+                        </div>
+                    </div>
+                </div>
             `).appendTo($obj);
+            this.$treeview = $root_tree.find('.list');
             this.$fileview = $(`
                 <div class="column fileview"></div>
             `).appendTo($obj);
@@ -168,7 +260,7 @@
         }
 
         response(data) {
-            console.log(data)
+            // console.log(data)
             // [{type: folder, path:..., name: ...}, ...]
             this.$treeview.html('');
             for (var item of data.content) {
