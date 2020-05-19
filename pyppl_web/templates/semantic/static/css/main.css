@@ -104,14 +104,15 @@ li.job.cached {
 .ui.buttons > .ui.button {
     width: 120px;
     border-right: 1px solid white;
+    max-width: 200px;
 }
 
 .ui.buttons.top > .ui.button {
-    margin-bottom: 2px;
+    margin-bottom: 1px;
 }
 
 .ui.buttons.bottom > .ui.button {
-    margin-top: 2px;
+    margin-top: 1px;
 }
 
 .ui.button.toggle.active {
@@ -127,7 +128,9 @@ li.job.running {
 
 .editor {
     border-radius: 6px;
-    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14),
+                0 1px 5px 0 rgba(0, 0, 0, 0.12),
+                0 3px 1px -2px rgba(0, 0, 0, 0.2);
     font-family: 'Source Code Pro', monospace;
     font-size: 14px;
     font-weight: 400;
@@ -137,6 +140,27 @@ li.job.running {
     padding: 10px;
     resize: none !important;
     tab-size: 4;
+    height: calc(70vh);
+}
+
+.code {
+    font-family: 'Source Code Pro', consolas, monospace;
+    font-size: 14px;
+    letter-spacing: normal;
+}
+
+.code p {
+    line-height: .5em;
+}
+
+.logger > .code {
+    border-radius: 6px;
+    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14),
+                0 1px 5px 0 rgba(0, 0, 0, 0.12),
+                0 3px 1px -2px rgba(0, 0, 0, 0.2);
+    padding: 16px 10px;
+    margin-top: 8px;
+    overflow-y: auto;
 }
 
 @keyframes JOB-RUNNING {
@@ -151,4 +175,65 @@ li.job.running {
     }
   }
 
+.ui.modal .scrolling.content {
+    min-height: calc(75vh);
+}
+.ui.modal.log .content p {
+    line-height: .5em;
+    font-family: consolas, Monaco, monospace;
+}
 
+.ui.modal.log .code {
+    overflow-y: auto;
+    max-height: 700px;
+    margin-top: 8px;
+    padding: 8px 4px;
+}
+
+.ui.form.action.logger {
+    display: inline-block;
+    width: 255px;
+    text-align: left;
+}
+
+.ui.filebrowser .ui.list {
+    margin: 0;
+}
+
+.ui.filebrowser {
+    height: 700px;
+    overflow-y: auto;
+}
+
+.ui.filebrowser > .column.fileview {
+    width: calc(100% - 270px) !important;
+    overflow: auto;
+}
+
+.ui.filebrowser > .ui.column.list {
+    width: 270px;
+    overflow-x: auto;
+    background-color: #EEE;
+}
+
+.ui.filebrowser .fileview {
+    height: 700px;
+}
+
+.fileview .code{
+    width: 100% !important;
+    overflow: auto;
+    margin-top: 0 !important;
+}
+
+.fileview .code p {
+    line-height: 1em;
+}
+
+.left {
+    text-align: left;
+}
+
+.right {
+    text-align: right;
+}

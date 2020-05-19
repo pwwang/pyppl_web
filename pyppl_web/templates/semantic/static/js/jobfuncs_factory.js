@@ -63,6 +63,9 @@
             this.remove_lock_button = this.$wrapper.find('.button.remove-lock');
             this.proc_detail_button = this.$wrapper.find('.button.proc-detail');
             this.job_script_button = this.$wrapper.find('.button.job-script');
+            this.show_stdout_button = this.$wrapper.find('.button.show-stdout');
+            this.show_stderr_button = this.$wrapper.find('.button.show-stderr');
+            this.list_jobdir_button = this.$wrapper.find('.button.list-jobdir');
 
             this.exclusive();
             this.listen();
@@ -92,6 +95,9 @@
             this.remove_lock_button.click( () => this.remove_lock_ui() );
             this.proc_detail_button.click( () => this.proc_detail_ui() );
             this.job_script_button.click( () => this.job_script_ui() );
+            this.show_stdout_button.click( () => this.show_logger_ui('job.stdout') );
+            this.show_stderr_button.click( () => this.show_logger_ui('job.stderr') );
+            this.list_jobdir_button.click( () => this.list_jobdir_ui() );
         }
 
         job_index() {
@@ -123,17 +129,81 @@
                     $(selector, in_main ? this.$main : 'body').is(':visible'));
         }
 
+        list_jobdir_ui() {
+            var $filebrowser = $(`<div class="filebrowser"></div>`);
+            this.$main.html($filebrowser);
+            var that = this;
+            $filebrowser.filebrowser({
+                request: function() {
+                    window.socket.filetree_req({
+                        proc: that.proc,
+                        job: that.job_index(),
+                        path: this.path,
+                        type: this.type,
+                        rootid: this.rootid
+                    });
+                }
+            });
+        }
+
+        show_logger_ui(type) {
+            var that = this;
+            var logger = $(`<div class="${type} logger"></div>`)
+                .appendTo(this.$main.html('')).logger({
+                    request: function(reqlog) {
+                        window.socket.logger_request({
+                            proc: that.proc,
+                            job: that.job_index(),
+                            reqlog: reqlog,
+                            eleid: this.id
+                        })
+                    }
+                }).logger();
+            logger.$main.height($(window).height() - 300);
+            logger.$header.find('.kill').before(`
+                <div class="ui logger action form">
+                    <div class="inline field">
+                        <label>Action</label>
+                        <select class="dropdown action" name="action">
+                            <option value="head">head</option>
+                            <option value="head -n20">head -n20</option>
+                            <option value="head -n50">head -n50</option>
+                            <option value="head -n100">head -n100</option>
+                            <option selected value="tail">tail</option>
+                            <option value="tail -n20">tail -n20</option>
+                            <option value="tail -n50">tail -n50</option>
+                            <option value="tail -n100">tail -n100</option>
+                            <option value="tail -f">tail -f</option>
+                            <option value="tail -f -n20">tail -f -n20</option>
+                            <option value="tail -f -n50">tail -f -n50</option>
+                            <option value="tail -f -n100">tail -f -n100</option>
+                            <option value="cat">cat</option>
+                        </select>
+                    </div>
+                </div>
+            `);
+            logger.$header.find('select.dropdown').on('change', function(){
+                logger.init();
+                window.socket.run_request({eleid: logger.id,
+                                           proc: that.proc,
+                                           job: that.job_index(),
+                                           target: type,
+                                           cmd: $(this).val()});
+                logger.request('all');
+            }).change();
+        }
+
         job_script_resp(data) {
             if (!this._request_staying(data, '.editor')) {
                 // we have switched procs or jobs
                 return;
             }
-            var jar = this.$main.find('.editor')
-                .addClass(data.lang)
-                .data('jar');
+            var jar = this.$main.find('.editor').codeeditor();
+            jar.updateLang(data.lang);
             jar.updateCode(data.script);
             jar.updateOptions({tab: data.indent});
-            this.$main.find('.ui.button.save').removeClass('disabled');
+            this.$main.find('.ui.button.save,.ui.button.save-run')
+                .removeClass('disabled');
         }
 
         job_script_req() {
@@ -142,71 +212,62 @@
             );
         }
 
-        job_script_running_resp(data) {
-            console.log(data)
-            if (!this._request_staying(data, '.editor')) {
-                // we have switched procs or jobs
-                return;
-            }
-            console.log(1)
-            if (data.isrunning === true) {
-                this.$main.find('.ui.button.save-run,.ui.button.run')
-                    .addClass('disabled');
-                this.$main.find('.ui.button.run')
-                    .text('Running');
-            } else {
-                this.$main.find('.ui.button.save-run,.ui.button.run')
-                    .removeClass('disabled');
-                this.$main.find('.ui.button.run')
-                    .text('Run');
-            }
-            // require modal for log update
-            // we will update the output even when data.isrunning == 'done'
-            if (data.isrunning === false ||
-                (!!data.reqlog && !this._request_staying(data, '.ui.modal.log', true, false))) {
-                return;
-            }
-            console.log(3)
-            var $content = $('.ui.modal.log .content').removeClass('loading');
-            if (data.reqlog == 'all') {
-                $content.prev('.header').html(`
-                    Running <strong>${this.job_index()}job.script</strong> of
-                    <strong>${this.proc}</strong> at PID: ${data.pid}
-                `)
-                $content.html(
-                    '<p>' + data.log.replace(/\n/, '</p><p>') + '</p>'
-                );
-            } else if (data.reqlog == 'more') {
-                $content.html(
-                    $content.html() +
-                    '<p>' + data.log.replace(/\n/, '</p><p>') + '</p>'
-                );
-            }
-            if (data.isrunning === true) {
-                // request more
-                setTimeout(
-                    () =>  this.job_script_running_req('more'),
-                    1
-                );
-            }
-        }
-
-        job_script_running_req(reqlog=false) {
-            window.socket.job_script_running_req(
-                {proc: this.proc, job: this.job_index(), reqlog: reqlog}
-            );
-        }
-
-        job_script_run_req() {
-            window.socket.job_script_run_req(
-                {proc: this.proc, job: this.job_index()}
-            );
+        job_script_run_req(eleid) {
+            // # eleid: logger.id,
+            // # proc: that.proc,
+            // # job: that.job,
+            // # target: type,
+            // # cmd: $(this).val()});
             this.$main.find('.ui.button.save-run,.ui.button.run')
                 .addClass('disabled');
-            this.$main.find('.ui.button.run')
-                .text('Started');
-            this.$main.find('.ui.button.log')
-                .addClass('enabled').click();
+            window.socket.run_request({
+                proc: this.proc,
+                job: this.job_index(),
+                target: 'job.script',
+                cmd: '',
+                eleid: eleid
+            });
+            // should receive a response from the server if successfully running
+            this.$main.find('.ui.button.log').click();
+            setTimeout(
+                () => $('#' + eleid).logger().request('all'),
+                1
+            );
+        }
+
+        job_script_save_resp(data) {
+            this.$main.find('.ui.button.save-run,.ui.button.save')
+                .removeClass('disabled');
+
+            if (data.ok) {
+                if (data.run) {
+                    this.job_script_run_req(data.eleid)
+                }
+            } else if (this._request_staying(data)) {
+                alert(`
+                    Failed to save job.script for ${this.proc}/${this.job_index()}
+                    ${data.msg}`
+                );
+            }
+        }
+
+        job_script_save_req(run=false, eleid=null) {
+            // # proc: that.proc,
+            // # job: that.job,
+            // # script
+            this.$main.find('.ui.button.save-run,.ui.button.save')
+                .addClass('disabled');
+            if (run) {
+                this.$main.find('.ui.button.run').addClass('disabled')
+            }
+
+            window.socket.job_script_save_req({
+                proc: this.proc,
+                job: this.job_index(),
+                script: this.$main.find('.editor').codeeditor().getCode(),
+                run: run,
+                eleid: eleid
+            });
         }
 
         job_script_ui() {
@@ -221,60 +282,68 @@
                   <div class="field">
                     <button class="ui teal disabled button save" type="button">Save</button>
                     <button class="ui blue disabled button save-run" type="button">Save &amp; Run</button>
-                    <button class="ui violet disabled button run" type="button">Run</button>
+                    <button class="ui violet button run" type="button">Run</button>
                     <button class="ui button log" type="button">Show Log</button>
                   </div>
                   <div class="ui modal log">
-                    <div class="header"></div>
-                    <div class="scrolling content">
-
+                    <div class="scrolling content"></div>
+                    <div class="actions">
+                      <div class="ui close button cancel">Close</div>
                     </div>
                   </div>
                 </form>
             `;
             this.$main.html(html);
-            var highlight = (editor) => {
-                // highlight.js does not trims old tags,
-                // let's do it by this hack.
-                editor.textContent = editor.textContent
-                hljs.highlightBlock(editor)
-            };
-            var jar = new CodeJar(this.$main.find('.editor')[0],
-                                  codeJarWithLineNumbers(highlight));
-            // save the instance
-            jar.updateCode('Loadding script and querying running status ...');
-            this.$main.find('.editor').data('jar', jar);
-            this.$main.find('.ui.button.log').click(() => {
-                this.$main.find('.ui.modal.log').modal({
-                    onShow: () => {
-                        var running = this.$main.find('.ui.button.run').text();
-                        var $content = $('.ui.modal.log .content');
-                        if (running == 'Running') {
-                            this.job_script_running_req('more');
-                        } else if (running == 'Run') { // not running
-                            if ($content.text() == '') {
-                                $content.html('<p>Job script is not running.</p>')
-                            }
-                        } else { // started
-                            $content.prev('.header').html(`
-                                Running <strong>${this.job_index()}job.script</strong> of
-                                <strong>${this.proc}</strong>
-                            `)
-                            $content.html('<p>Loading...</p>');
-                            this.job_script_running_req('all');
-                        }
+            this.$main.find('.editor').codeeditor({
+                init_code: 'Loading  ...'
+            }).codeeditor();
+            // .ui.modal.log will jump to body by semantic ui
+            var that = this;
+            var logger = this.$main.find(".ui.modal.log > .content").logger({
+                request: function(reqlog) {
+                    window.socket.logger_request({
+                        proc: that.proc,
+                        job: that.job_index(),
+                        reqlog: reqlog,
+                        eleid: this.id
+                    })
+                },
+                require_stay: false,
+                callback: function(status) {
+                    if (status === 'done' || status === 'killed') {
+                        that.$main.find('.ui.button.save-run,.ui.button.run')
+                            .removeClass('disabled');
                     }
+                }
+            }).logger();
+            logger.init();
+
+            this.$main.find('.ui.button.log').click(() => {
+                $('.ui.modal.log:has(#' + logger.id + ')').modal({
+                    closable: false
                 }).modal('show');
             });
+            // send request to run job.script
             this.$main.find('.ui.button.run').click(
-                () => this.job_script_run_req()
+                // run the script
+                () => this.job_script_run_req(logger.id)
             );
+
+            this.$main.find('.ui.button.save').click(
+                () => this.job_script_save_req()
+            )
+
+            this.$main.find('.ui.button.save-run').click(
+                () => this.job_script_save_req(true, logger.id)
+            )
+            // request the content of job.script
             this.job_script_req();
-            this.job_script_running_req();
+            // request the running status of job.script
+            // this.job_script_running_req();
         }
 
         proc_detail_resp(data) {
-            if (!this._request_staying(data, '.ui.loading.proc-detail')) {
+            if (!this._request_staying(data, '.ui.loading.proc-detail', false)) {
                 return;
             }
             this.$main.children('div.loading')

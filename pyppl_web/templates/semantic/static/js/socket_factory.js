@@ -23,8 +23,12 @@
                            (data) => {this.proc_detail_resp(data)});
             this.socket.on('job_script_resp',
                            (data) => {this.job_script_resp(data)});
-            this.socket.on('job_script_running_resp',
-                           (data) => {this.job_script_running_resp(data)});
+            this.socket.on('logger_response',
+                           (data) => {this.logger_response(data)});
+            this.socket.on('job_script_save_resp',
+                           (data) => {this.job_script_save_resp(data)});
+            this.socket.on('filetree_resp',
+                           (data) => {this.filetree_resp(data)});
         }
 
         connect() {
@@ -47,6 +51,7 @@
 
         proc_detail_resp(data) {
             console.log('Received proc_detail_resp for ' + data.proc);
+            console.debug(data);
             var jobfuncs = window.tab.jobfuncs(data.proc);
             if (jobfuncs !== undefined) {
                 jobfuncs.proc_detail_resp(data);
@@ -89,6 +94,16 @@
                 jobfuncs.remove_lock_resp(data);
             }
         }
+        job_script_save_resp(data) {
+            var jobfuncs = window.tab.jobfuncs(data.proc);
+            if (jobfuncs !== undefined) {
+                jobfuncs.job_script_save_resp(data);
+            }
+        }
+        job_script_save_req(data) {
+            // proc, job, script
+            this.socket.emit('job_script_save_req', data);
+        }
 
         job_script_resp(data) {
             var jobfuncs = window.tab.jobfuncs(data.proc);
@@ -100,20 +115,48 @@
             console.log('Emitting job_script_req');
             this.socket.emit('job_script_req', data);
         }
-        job_script_running_resp(data) {
-            var jobfuncs = window.tab.jobfuncs(data.proc);
-            if (jobfuncs !== undefined) {
-                jobfuncs.job_script_running_resp(data);
-            }
-        }
-        job_script_running_req(data) {
-            console.log('Emitting job_script_running_req');
-            this.socket.emit('job_script_running_req', data);
-        }
 
         job_script_run_req(data) {
             console.log('Emitting job_script_run_req');
             this.socket.emit('job_script_run_req', data);
+        }
+
+        logger_response(data) {
+            $('#' + data.eleid).logger()?.response(data);
+        }
+
+        logger_request(data) {
+            // proc, job, eleid, reqlog, action
+            console.log('Emitting logger_request');
+            this.socket.emit('logger_request', data);
+        }
+        filetree_req(data) {
+            // proc, job, type, path, rootid
+            console.log('Emitting filetree_req');
+            this.socket.emit('filetree_req', data);
+        }
+        filetree_resp(data) {
+            // type, content, path, rootid
+            var root = $('#' + data.rootid).filebrowser();
+            if (data.path === '') {
+                root.response(data);
+            } else {
+                var pathparts = data.path.split('/');
+                var obj = root;
+                for (var part of pathparts) {
+                    if (part === '') {
+                        break;
+                    }
+                    obj = root.children[part];
+                }
+                obj.response(data);
+            }
+        }
+        run_request(data) {
+            // eleid, cmd
+            console.log('Emitting run_request')
+            console.debug(data);
+            this.socket.emit('run_request', data);
         }
 
         init_resp(data) {

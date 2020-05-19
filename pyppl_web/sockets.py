@@ -1,5 +1,7 @@
 """SocketIO operations for pyppl_web"""
+import base64
 from pathlib import Path
+from diot import Diot
 import cmdy
 from flask import request
 from flask_socketio import SocketIO, Namespace, emit
@@ -7,6 +9,22 @@ from pyppl.config import config
 from .shared import logger, pipeline_data
 from .utils import read_cmdout
 # pylint: disable=no-self-use
+
+def _filetype(path):
+    """Determine the file type"""
+    if path.suffix in ('.png', '.jpg', '.jpeg', '.bmp', '.tif', '.tiff'):
+        return 'image'
+    if '.script' in path.name:
+        with path.open('rt') as fpath:
+            shebang = fpath.readline().split()[0][2:]
+            intepreter = Path(shebang).name
+        return Diot(
+            python2='python',
+            python3='python',
+            Rscript='r',
+            sh='bash'
+        ).get(intepreter, intepreter.lower())
+    return 'file'
 
 class RootNamespace(Namespace):
     """Namespace for socketio"""
@@ -143,7 +161,6 @@ class RootNamespace(Namespace):
         rdata = (js_running_data.
                  setdefault(data['proc'], {}).
                  setdefault(data['job'], {}))
-        logger.error(str(rdata.keys()))
         if rdata:
             rdata = js_running_data[data['proc']][data['job']]
             resp['isrunning'] = True
@@ -175,6 +192,136 @@ class RootNamespace(Namespace):
         rdata['buffer'] = ''
         rdata['cmdy'] = cmdy._(_exe=str(jobscript),
                                _bg=True, _iter=True)
+
+    def on_run_request(self, data):
+        """Running a command/script"""
+        logger.debug('Got request run_request from client '
+                     f'{request.remote_addr}')
+        # eleid: logger.id,
+        # proc: that.proc,
+        # job: that.job,
+        # target: type,
+        # cmd: $(this).val()});
+        data = Diot(data)
+        running = pipeline_data.setdefault('running', Diot())
+        if data.eleid in running:
+            # is already running
+            return
+
+        cmd = data.cmd
+        if 'target' in data:
+            workdir = pipeline_data.procs[data['proc']].props.workdir
+            target = Path(workdir) / str(int(data.job)) / str(data.target)
+            target = repr(str(target))
+            cmd = cmd + ' ' + target if cmd else target
+
+        running[data.eleid] = {
+            'cmdy': cmdy.bash(c=cmd, _bg=True, _iter=True, _raise=False),
+            'buffer': ''
+        }
+
+    def on_logger_request(self, data):
+        """When requesting the output of a running command"""
+        logger.debug('Got request logger_request from client '
+                     f'{request.remote_addr}')
+        # proc: that.proc,
+        # job: that.job_index(),
+        # reqlog: reqlog,
+        # eleid: this.id
+
+        # resp
+        # // data.log: the message got to show
+        # // data.isrunning: whether the process is still running
+        data = Diot(data)
+        running = pipeline_data.setdefault('running', Diot())
+
+        resp = data
+        resp.isrunning = False
+        resp.log = ''
+        if data.eleid in running:
+            rdata = running[data.eleid]
+            resp.isrunning = True
+            resp.pid = rdata['cmdy'].pid
+            buffer, done = read_cmdout(rdata['cmdy'])
+            rdata['buffer'] = rdata.get('buffer', '') + buffer
+
+            if data.reqlog == 'all':
+                resp.log = rdata['buffer']
+            elif data.reqlog == 'more':
+                resp.log = buffer
+            elif data.reqlog == 'kill':
+                cmdy.kill({'9': resp.pid}, _raise=False)
+                # killing succeeded?
+                resp.isrunning = 'killed'
+                resp.log = ''
+                done = False
+                try: # this could be deleted by previous request
+                    del running[data.eleid]
+                except KeyError:
+                    pass
+
+            if done:
+                resp.isrunning = 'done'
+                try:
+                    del running[data.eleid]
+                except KeyError:
+                    pass
+
+        logger.debug('Sending response logger_response to client '
+                     f'{request.remote_addr} with data {resp}')
+        emit('logger_response', resp)
+
+    def on_job_script_save_req(self, data):
+        """Save job.script"""
+        # proc, job, script
+        data = Diot(data)
+        workdir = pipeline_data.procs[data['proc']].props.workdir
+        jobscript = Path(workdir) / str(int(data.job)) / 'job.script'
+        resp = Diot(proc=data.proc, job=data.job, ok=True, msg='',
+                    run=data.run, eleid=data.eleid)
+        try:
+            cmdy.cp(jobscript, str(jobscript) + '.pyppl_web.bak')
+            jobscript.write_text(data.script)
+            if data.run:
+                self.on_run_request(Diot(
+                    eleid=data.eleid,
+                    proc=data.proc,
+                    job=data.job,
+                    target='job.script',
+                    cmd=''
+                ))
+        except BaseException as ex:
+            resp.ok = False
+            resp.msg = str(ex)
+        emit('job_script_save_resp', resp)
+
+    def on_filetree_req(self, data):
+        """Request the content of a folder or a file item"""
+        # data: proc, job, type, path, eleid, rootid
+        # resp: proc, job, type, eleid, path, rootid, content
+        data = Diot(data)
+        resp = data.copy()
+        workdir = pipeline_data.procs[data['proc']].props.workdir
+        jobdir = Path(workdir) / str(data.job)
+        path = jobdir.joinpath(data.path)
+        if data.type == 'folder':
+            resp.content = []
+            for item in path.iterdir():
+                resp.content.append(Diot(
+                    name=item.name,
+                    path=(f"{data.path}/{item.name}" if data.path
+                           else item.name),
+                    type='folder' if item.is_dir() else _filetype(item)
+                ))
+        elif data.type == 'image':
+            with open(path, 'rb') as fimg:
+                resp.content = base64.b64decode(fimg.read()).decode()
+        elif path.stat().st_size > 1024 * 1024:
+            resp.type = False
+        else:
+            with open(path, 'rt') as fpath:
+                resp.content = fpath.read()
+        emit('filetree_resp', resp)
 
 # pylint: disable=invalid-name
 def create_socket(app):

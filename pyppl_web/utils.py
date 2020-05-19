@@ -1,5 +1,5 @@
 """Some utility functions for pyppl_web"""
-from typing import Union
+from typing import Tuple
 from socket import socket
 from cmdy import Cmdy
 from pyppl import Proc, PyPPL
@@ -11,9 +11,9 @@ def auto_port() -> int:
         sock.bind(('', 0))
         return sock.getsockname()[1]
 
-def read_cmdout(cmd: Cmdy, timeout: float = 1.0) -> Union[str, bool]:
+def read_cmdout(cmd: Cmdy, timeout: float = 1.0) -> Tuple[str, bool]:
     """Try to read a chunk of output of the cmd
-    Returns False if we hit the end
+    Returns a tuple of (out retrieved, whether the cmd is done)
     """
     # cmd has to have _bg=True and _iter=True
     ret = ''
@@ -22,16 +22,14 @@ def read_cmdout(cmd: Cmdy, timeout: float = 1.0) -> Union[str, bool]:
         try:
             line = cmd.next(timeout=.1)
         except StopIteration:
-            if not ret:
-                return False
-            return ret
+            return (ret, True)
 
         if line is None:
             continue
 
         if line:
             ret += line
-    return ret
+    return (ret, False)
 
 class PipelineData:
     """Since we don't have hidden nodes, so we define a new class
