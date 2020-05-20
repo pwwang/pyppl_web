@@ -205,7 +205,7 @@
             // proc: procid, job: jobindex, status: succeeded|cached|failed
             // size: proc size
 
-            var node = this.cyto.$("#" + data.proc);
+            var node = this.cyto.$('[id = "' + data.proc + '"]');
             delete data.proc
             node.data({...node.data(), ...data});
             this._update_node(node);
