@@ -20,21 +20,37 @@ if os.path.exists(readme_path):
 
 setup(
     long_description=readme,
-    name='pyppl_flowchart',
-    version='0.1.4',
-    description='Generating flowchart for PyPPL',
+    name='pyppl_web',
+    version='0.0.1',
+    description='Web client to monitor pipeline processes for PyPPL',
     python_requires='==3.*,>=3.6.0',
     project_urls={
-        "homepage": "https://github.com/pwwang/pyppl_flowchart",
-        "repository": "https://github.com/pwwang/pyppl_flowchart"
+        "homepage": "https://github.com/pwwang/pyppl_web",
+        "repository": "https://github.com/pwwang/pyppl_web"
     },
     author='pwwang',
     author_email='pwwang@pwwang.com',
     license='MIT',
-    entry_points={"pyppl": ["pyppl_flowchart = pyppl_flowchart"]},
-    packages=[],
+    entry_points={"pyppl": ["pyppl_web = pyppl_web:PYPPLWEB"]},
+    packages=['pyppl_web'],
     package_dir={"": "."},
-    package_data={},
-    install_requires=['graphviz==0.*,>=0.11.0', 'pyppl'],
+    package_data={
+        "pyppl_web": [
+            "templates/semantic/*.html", "templates/semantic/static/css/*.css",
+            "templates/semantic/static/css/themes/default/assets/fonts/*.eot",
+            "templates/semantic/static/css/themes/default/assets/fonts/*.otf",
+            "templates/semantic/static/css/themes/default/assets/fonts/*.svg",
+            "templates/semantic/static/css/themes/default/assets/fonts/*.ttf",
+            "templates/semantic/static/css/themes/default/assets/fonts/*.woff",
+            "templates/semantic/static/css/themes/default/assets/fonts/*.woff2",
+            "templates/semantic/static/css/themes/default/assets/images/*.png",
+            "templates/semantic/static/images/*.png",
+            "templates/semantic/static/js/*.js"
+        ]
+    },
+    install_requires=[
+        'cmdy', 'diot', 'flask==1.*,>=1.1.0', 'flask-socketio==4.*,>=4.3.0',
+        'gevent-websocket==0.*,>=0.10.0', 'pyppl'
+    ],
     extras_require={"dev": ["pytest", "pytest-cov"]},
 )

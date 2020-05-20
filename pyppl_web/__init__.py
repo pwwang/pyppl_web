@@ -3,8 +3,7 @@ from threading import Thread
 from pathlib import Path
 from flask_socketio import SocketIO
 from diot import Diot
-from pyppl.exception import PluginNoSuchPlugin
-from pyppl.plugin import hookimpl, _get_plugin
+from pyppl.plugin import hookimpl
 from pyppl.logger import Logger
 from pyppl.config import config
 from .shared import (logger, PLUGIN, DEFAULT_PORT, DEFAULT_THEME,
@@ -21,28 +20,28 @@ __version__ = "0.0.1"
 class PyPPLWeb:
     """Web client to monitor pipeline processes for PyPPL"""
 
+    __version__ = __version__
+
     def __init__(self):
+
         self.port = None
         self.thread = None
         self.namespace = None
         self.app = None
         self.socketio = None
         self.pdata = pipeline_data
-        # make sure setup is running on runtime
-        try:
-            _get_plugin(PLUGIN)
-        except PluginNoSuchPlugin:
-            self.setup(config)
+        self.setup()
 
     def start_server(self):
         """Start the socket server with given config"""
         logger.info(f"Launching web server at port {self.port} ...")
+        try:
+            self.socketio.run(self.app, port=self.port,
+                              debug=config.config.web_debug)
+        except OSError as ex:
+            logger.error(f'Failed to start server: {ex}')
 
-        self.socketio.run(self.app, port=self.port,
-                          debug=config.config.web_debug)
-
-    @hookimpl
-    def setup(self, config): # pylint: disable=redefined-outer-name
+    def setup(self):
         """Setup the plugin"""
         config.config.web_port = DEFAULT_PORT
         config.config.web_debug = SOCKETIO_DEBUG
@@ -179,3 +178,5 @@ class PyPPLWeb:
                                 'job': job.index,
                                 'rc': job.rc,
                                 'status': status})
+
+PYPPLWEB = PyPPLWeb()

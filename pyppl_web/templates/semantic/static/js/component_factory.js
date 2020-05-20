@@ -34,6 +34,13 @@
         return `image/${ext}`;
     }
 
+    function _truncateString(str, num=30) {
+        if (str.length <= num) {
+          return str;
+        }
+        return str.slice(0, num) + '...';
+    }
+
     class FileTreeItem {
         constructor($obj, data, request, $view, rootid) {
             // add unique id to this $obj, so that later this can be retrieved
@@ -48,7 +55,7 @@
                 <div class="item">
                     <i class="icon"></i>
                     <div class="content">
-                        <div class="header">${data.name}</div>
+                        <div class="header">${_truncateString(data.name)}</div>
                     </div>
                 </div>
             `);

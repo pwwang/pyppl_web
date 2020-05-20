@@ -11,9 +11,6 @@ proc.input = {'a': list(range(6))}
 proc.output = 'fav:file:{{i.a}}.png'
 proc.script = '''
 wget http://localhost:8527/images/favicon.png -O {{o.fav}}
-if [[ {{job.index}} -eq 3 ]]; then
-    exit 1;
-fi
 '''
 proc.cache = False
 

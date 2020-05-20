@@ -2,7 +2,8 @@
 from typing import Tuple
 from socket import socket
 from cmdy import Cmdy
-from pyppl import Proc, PyPPL
+from pyppl.pyppl import PyPPL
+from pyppl.proc import Proc
 from pyppl.jobmgr import STATES
 
 def auto_port() -> int:

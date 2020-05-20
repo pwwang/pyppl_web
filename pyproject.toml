@@ -26,4 +26,4 @@ pytest = "*"
 pytest-cov = "*"
 
 [tool.poetry.plugins.pyppl]
-pyppl_web = "pyppl_web:PyPPLWeb"
+pyppl_web = "pyppl_web:PYPPLWEB"
