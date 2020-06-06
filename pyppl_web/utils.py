@@ -1,7 +1,7 @@
 """Some utility functions for pyppl_web"""
+import builtins
 from typing import Tuple
 from socket import socket
-from cmdy import Cmdy
 from pyppl.pyppl import PyPPL
 from pyppl.proc import Proc
 from pyppl.jobmgr import STATES
@@ -12,7 +12,7 @@ def auto_port() -> int:
         sock.bind(('', 0))
         return sock.getsockname()[1]
 
-def read_cmdout(cmd: Cmdy, timeout: float = 1.0) -> Tuple[str, bool]:
+def read_cmdout(cmd: "CmdyResult", timeout: float = 1.0) -> Tuple[str, bool]:
     """Try to read a chunk of output of the cmd
     Returns a tuple of (out retrieved, whether the cmd is done)
     """
@@ -40,7 +40,7 @@ class PipelineData:
     def __init__(self, ppl: PyPPL):
         # {group => nodeid => node data}
         self.ppl = ppl
-        self.nodes: dict = {}
+        self.nodes: "dict" = {}
         self.links: list = []
         self.name: str = ppl.name
 
@@ -103,11 +103,11 @@ class PipelineData:
         if nodedata['status'] != 'failed':
             nodedata['status'] = status
 
-    def node_data(self, node: Proc) -> dict:
+    def node_data(self, node: Proc) -> "dict":
         """Get the data for a node for individual socket response"""
         group: str = node.procset or PipelineData.ROOTGROUP
-        return dict(proc=node.shortname,
-                    **self.nodes[group][node.shortname])
+        return builtins.dict(proc=node.shortname,
+                             **self.nodes[group][node.shortname])
 
     def add_link(self, node1: Proc, node2: Proc):
         """Add a link to the pipeline data"""
@@ -115,7 +115,7 @@ class PipelineData:
         if pair not in self.links:
             self.links.append(pair)
 
-    def dict(self) -> dict:
+    def dict(self) -> "dict":
         """Convert to json data to send to client"""
         return {
             "name": self.name,

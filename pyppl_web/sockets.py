@@ -194,8 +194,7 @@ class RootNamespace(Namespace):
         jobscript = Path(workdir) / str(int(data['job'])) / 'job.script'
 
         rdata['buffer'] = ''
-        rdata['cmdy'] = cmdy._(_exe=str(jobscript),
-                               _bg=True, _iter=True)
+        rdata['cmdy'] = cmdy._(_exe=str(jobscript)).iter
 
     def on_run_request(self, data):
         """Running a command/script"""
@@ -220,7 +219,7 @@ class RootNamespace(Namespace):
             cmd = cmd + ' ' + target if cmd else target
 
         running[data.eleid] = {
-            'cmdy': cmdy.bash(c=cmd, _bg=True, _iter=True, _raise=False),
+            'cmdy': cmdy.bash(c=cmd, _raise=False).iter,
             'buffer': ''
         }
 
