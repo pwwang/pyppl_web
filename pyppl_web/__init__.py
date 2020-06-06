@@ -15,7 +15,7 @@ from .utils import auto_port, PipelineData
 
 # pylint: disable=unused-argument,no-self-use
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 class PyPPLWeb:
     """Web client to monitor pipeline processes for PyPPL"""
